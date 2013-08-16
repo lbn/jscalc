@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+<title></title>
+<script type="text/javascript" src="./jquery.js"></script>
+<script type="text/javascript" src="./underscore.js"></script>
+<script type="text/javascript" src="./calc.js"></script>
+<script>
+var u = _;
+window.onload = function() {
+    $("#ev").bind("click",function(){
+        var rawexpr = $("#expr").val();
+        var tokens = _.map(rawexpr.split(" "),
+            function(t){return isFinite(t)?parseInt(t):t});
+        var res = exports.evaluateIN(tokens);
+        $("#result").text(res);
+    });
+}
+</script>
+</head>
+<body>
+<input type="text" id="expr" />
+<input type="button" id="ev" value="eval" />
+<br />
+<br />
+<span id="result">0</span>
+</body>
+</html>
