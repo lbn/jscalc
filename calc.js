@@ -5,31 +5,47 @@ if (typeof require != "undefined") {
     exports = {};
 }
 
+var isOperator = function(token){
+    return token && u.where(operators,{sign:token}).length>0};
+var isFunction = function(token){
+    return token && u.where(functions,{name:token}).length>0};
+
 var operators = exports.operators = [
-{sign:"+",left_assoc:true,precedence:2,evaluate:function(expr,args){return expr(args[0])+expr(args[1])}},
-{sign:"-",left_assoc:true,precedence:2,evaluate:function(expr,args){return expr(args[0])-expr(args[1])}},
-{sign:"*",left_assoc:true,precedence:3,evaluate:function(expr,args){return expr(args[0])*expr(args[1])}},
-{sign:"/",left_assoc:true,precedence:3,evaluate:function(expr,args){return expr(args[0])/expr(args[1])}}];
+{sign:"+",left_assoc:true,precedence:2,args:2,evaluate:function(expr,args){return expr(args[0])+expr(args[1])}},
+{sign:"-",left_assoc:true,precedence:2,args:2,evaluate:function(expr,args){return expr(args[0])-expr(args[1])}},
+{sign:"*",left_assoc:true,precedence:3,args:2,evaluate:function(expr,args){return expr(args[0])*expr(args[1])}},
+{sign:"/",left_assoc:true,precedence:3,args:2,evaluate:function(expr,args){return expr(args[0])/expr(args[1])}},
+{sign:"^",left_assoc:false,precedence:4,args:2,evaluate:function(expr,args){return Math.pow(expr(args[0]),expr(args[1])); }}];
 
 
 var functions = [
-{name:"sin",args:1}
+{name:"sqrt",args:1,evaluate:function(expr,args){return Math.sqrt(expr(args[0]))}}
 ]
        
 // Evaluate a structured RPN expression
 var evaluateRPN_ = exports.evaluateRPN_ = function evaluateRPN_(args) {
     var s = args instanceof Array?u.last(args):[args];
     var myop = u.findWhere(operators,{sign:s});
-    return myop?myop.evaluate(evaluateRPN_,args):args;
+    var myfun = u.findWhere(functions,{name:s});
+    if (myop) {
+        return myop.evaluate(evaluateRPN_,args);
+    } else if (myfun) {
+        return myfun.evaluate(evaluateRPN_,args);
+    } else {
+        return args;
+    }
 }
 
 // Structure an RPN expression
 var structRPN = exports.structRPN = function structRPN(args) {
-    var rpn = function rpn(lst,op) {
-        if (["+","-","*","/"].indexOf(op)!=-1) {
-            return [[lst[1],lst[0],op]].concat(u.last(lst,lst.length-2)); }
-        else {
-            return [op].concat(lst);
+    var rpn = function rpn(lst,token) {
+        var op = u.find(operators,function(op){return op.sign==token;});
+        var fun = u.find(functions,function(fun){return fun.name==token;});
+        if (op||fun) {
+            var args = op?op.args:fun.args;
+            return [u.first(lst,args).concat(token)].concat(u.last(lst,lst.length-args));
+        } else {
+            return [token].concat(lst);
         }
     }
     return u.reduce(args,rpn,[])[0];
@@ -48,10 +64,6 @@ var toRPN = exports.toRPN = function toRPN(args) {
     var output = [];
     var stack = [];
 
-    var isOperator = function(token){
-        return token && u.where(operators,{sign:token}).length>0};
-    var isFunction = function(token){
-        return token && u.where(functions,{sign:token}).length>0};
     for (var ti in args) {
         var token = args[ti];
         // Operator
